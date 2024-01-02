@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Maks Launcher</string>
+    <string name="app_name" translatable="false">Maks Launcher</string>
+    <string name="add_launcher_object" translatable="false">Add launcher object</string>
 </resources>
