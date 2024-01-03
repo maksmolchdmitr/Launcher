@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -62,14 +61,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import maks.molch.dmitr.makslauncher.data.Application
 import maks.molch.dmitr.makslauncher.data.Folder
+import maks.molch.dmitr.makslauncher.data.GlobalSetting
 import maks.molch.dmitr.makslauncher.data.LauncherObject
 import maks.molch.dmitr.makslauncher.repository.FolderRepository
+import maks.molch.dmitr.makslauncher.repository.GlobalSettingRepository
 import maks.molch.dmitr.makslauncher.repository.preferences.PreferencesDataStoreFolderRepository
+import maks.molch.dmitr.makslauncher.repository.preferences.PreferencesDataStoreGlobalSettingRepository
 import maks.molch.dmitr.makslauncher.ui.theme.MaksLauncherTheme
 
 class MainActivity : ComponentActivity() {
     //    private val folderRepository: FolderRepository = MockFolderRepository()
-    private val folderRepository: FolderRepository = PreferencesDataStoreFolderRepository(this)
+    private val folderRepository: FolderRepository =
+        PreferencesDataStoreFolderRepository(this as Context)
+    private val globalSettingRepository: GlobalSettingRepository =
+        PreferencesDataStoreGlobalSettingRepository(this as Context)
     private val folderNameKey = "FOLDER_NAME_KEY"
     private lateinit var folderName: String
     private lateinit var installedApplications: List<LauncherObject>
@@ -112,7 +117,13 @@ class MainActivity : ComponentActivity() {
         return applicationList
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
+    private fun getGlobalSetting(): GlobalSetting {
+        return runBlocking {
+            globalSettingRepository.get() ?: GlobalSetting(5, 5)
+        }
+    }
+
+    @OptIn(ExperimentalFoundationApi::class)
     @Composable
     fun MainContent(launcherObjectList: List<LauncherObject>) {
         folderLauncherObjects = remember {
@@ -129,7 +140,17 @@ class MainActivity : ComponentActivity() {
 
         MaksLauncherTheme {
             Surface(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .combinedClickable(
+                        onClick = {},
+                        onLongClick = {
+                            val intent = Intent(
+                                context,
+                                SettingActivity::class.java
+                            )
+                            startActivity(intent)
+                        }),
                 color = MaterialTheme.colorScheme.background
             ) {
                 val startLauncherObject: (LauncherObject) -> Unit = { launcherObject ->
@@ -155,7 +176,7 @@ class MainActivity : ComponentActivity() {
                     launcherObjectSettingDialog.value = true
                 }
                 LauncherObjects(
-                    5,
+                    getGlobalSetting().objectCountInRow,
                     launcherObjects = folderLauncherObjects.value,
                     onObjectClick = startLauncherObject,
                     onObjectLongPress = showLauncherObjectSettings,
@@ -194,7 +215,11 @@ class MainActivity : ComponentActivity() {
         }
 
         if (addApplicationBoxVisible.value) {
-            AddApplicationBox(context, addApplicationBoxVisible)
+            AddApplicationBox(
+                context,
+                addApplicationBoxVisible,
+                getGlobalSetting().objectCountInRowInAdding
+            )
         }
 
         if (addFolderBoxVisible.value) {
@@ -317,7 +342,11 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun AddApplicationBox(context: Context, addApplicationBoxVisible: MutableState<Boolean>) {
+    fun AddApplicationBox(
+        context: Context,
+        addApplicationBoxVisible: MutableState<Boolean>,
+        objectCountInRowInAdding: Int
+    ) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -342,7 +371,7 @@ class MainActivity : ComponentActivity() {
                     .show()
             }
             LauncherObjects(
-                1,
+                objectCountInRowInAdding,
                 launcherObjects = installedApplications,
                 onObjectClick = addLauncherObjectToFolderAndCloseAddBox,
                 onObjectLongPress = some,

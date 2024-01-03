@@ -11,7 +11,7 @@ import maks.molch.dmitr.makslauncher.data.gson
 import maks.molch.dmitr.makslauncher.repository.FolderRepository
 
 class PreferencesDataStoreFolderRepository(context: Context) : FolderRepository {
-    private val dataStore = context.createDataStore(name = "settings")
+    private val dataStore = context.createDataStore(name = "folders")
     override suspend fun save(name: String, folder: Folder) {
         val value = gson.toJson(folder)
         val dataStoreKey = preferencesKey<String>(name)
