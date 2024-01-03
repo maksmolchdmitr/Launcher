@@ -56,8 +56,6 @@ import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import maks.molch.dmitr.makslauncher.data.Application
 import maks.molch.dmitr.makslauncher.data.Folder
@@ -68,6 +66,7 @@ import maks.molch.dmitr.makslauncher.repository.GlobalSettingRepository
 import maks.molch.dmitr.makslauncher.repository.preferences.PreferencesDataStoreFolderRepository
 import maks.molch.dmitr.makslauncher.repository.preferences.PreferencesDataStoreGlobalSettingRepository
 import maks.molch.dmitr.makslauncher.ui.theme.MaksLauncherTheme
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     //    private val folderRepository: FolderRepository = MockFolderRepository()
@@ -91,7 +90,7 @@ class MainActivity : ComponentActivity() {
             folderRepository.get(folderName)
         } ?: run {
             val res = Folder(folderName)
-            lifecycleScope.launch {
+            runBlocking {
                 folderRepository.save(folderName, res)
             }
             res
@@ -320,13 +319,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @SuppressLint("UnrememberedMutableState")
-    @Preview(showBackground = true)
-    @Composable
-    fun Preview() {
-        AddFolderBox(remember { mutableStateOf(false) })
-    }
-
     @Composable
     fun AddFolderBox(addFolderBoxVisible: MutableState<Boolean>) {
         Box(
@@ -342,13 +334,18 @@ class MainActivity : ComponentActivity() {
                     value = folderNameText.value,
                     onValueChange = { folderNameText.value = it },
                     label = { Text("Folder Name") },
-                    modifier = Modifier.background(Color.Black),
+                    modifier = Modifier
+                        .background(Color.Black)
+                        .weight(2f, true),
                 )
 
-                Button(onClick = {
-                    addToCurrentFolder(Folder(folderNameText.value))
-                    addFolderBoxVisible.value = false
-                }) {
+                Button(
+                    onClick = {
+                        addToCurrentFolder(Folder(folderNameText.value))
+                        addFolderBoxVisible.value = false
+                    },
+                    modifier = Modifier.weight(1f, true),
+                ) {
                     Text("Add")
                 }
             }
@@ -366,30 +363,74 @@ class MainActivity : ComponentActivity() {
                 .fillMaxSize()
                 .background(Color.DarkGray)
         ) {
-            val addLauncherObjectToFolderAndCloseAddBox: (LauncherObject) -> Unit =
-                { launcherObject ->
+            Column {
+                val objects = remember {
+                    mutableStateOf(installedApplications)
+                }
+                SearchRowBlock { searchValue ->
+                    objects.value = installedApplications.filter { launcherObject ->
+                        launcherObject.name.lowercase(Locale.getDefault()).startsWith(
+                            searchValue.lowercase(
+                                Locale.getDefault()
+                            )
+                        )
+                    }
+                }
+                val addLauncherObjectToFolderAndCloseAddBox: (LauncherObject) -> Unit =
+                    { launcherObject ->
+                        Toast.makeText(
+                            context,
+                            "addLauncherObjectToFolderAndCloseAddBox with $launcherObject",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        addToCurrentFolder(launcherObject)
+                        addApplicationBoxVisible.value = false
+                    }
+                val some: (LauncherObject) -> Unit = { launcherObject ->
                     Toast.makeText(
                         context,
-                        "addLauncherObjectToFolderAndCloseAddBox with $launcherObject",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    addToCurrentFolder(launcherObject)
-                    addApplicationBoxVisible.value = false
+                        "Some add box launcher object acts with $launcherObject",
+                        Toast.LENGTH_SHORT
+                    )
+                        .show()
                 }
-            val some: (LauncherObject) -> Unit = { launcherObject ->
-                Toast.makeText(
-                    context,
-                    "Some add box launcher object acts with $launcherObject",
-                    Toast.LENGTH_SHORT
+                LauncherObjects(
+                    objectCountInRowInAdding,
+                    launcherObjects = objects.value,
+                    onObjectClick = addLauncherObjectToFolderAndCloseAddBox,
+                    onObjectLongPress = some,
                 )
-                    .show()
             }
-            LauncherObjects(
-                objectCountInRowInAdding,
-                launcherObjects = installedApplications,
-                onObjectClick = addLauncherObjectToFolderAndCloseAddBox,
-                onObjectLongPress = some,
+        }
+    }
+
+    @SuppressLint("UnrememberedMutableState")
+    @Preview(showBackground = true)
+    @Composable
+    fun Preview() {
+        DialogBlock(onDismissRequest = {}) {
+            SearchRowBlock(onSearchClick = {})
+        }
+    }
+
+    @Composable
+    fun SearchRowBlock(
+        onSearchClick: (String) -> Unit,
+    ) {
+        Row {
+            val value = remember {
+                mutableStateOf("")
+            }
+            TextField(
+                value = value.value, onValueChange = { value.value = it },
+                modifier = Modifier.weight(2f, true),
             )
+            Button(
+                onClick = { onSearchClick(value.value) },
+                modifier = Modifier.weight(1f, true)
+            ) {
+                Text("Search")
+            }
         }
     }
 
@@ -400,7 +441,7 @@ class MainActivity : ComponentActivity() {
         val objects = ArrayList(folder.objects)
         objects.add(launcherObject)
         folderLauncherObjects.value = objects
-        lifecycleScope.launch {
+        runBlocking {
             folderRepository.save(folderName, Folder(folderName, objects))
         }
     }
@@ -412,7 +453,7 @@ class MainActivity : ComponentActivity() {
         val objects = ArrayList(folder.objects)
         objects.remove(launcherObject)
         folderLauncherObjects.value = objects
-        lifecycleScope.launch {
+        runBlocking {
             folderRepository.save(folderName, Folder(folderName, objects))
         }
     }
