@@ -452,11 +452,11 @@ class MainActivity : ComponentActivity() {
                     .padding(5.dp)
                     .weight(1f, true)
                     .align(Alignment.CenterVertically)
-                    .background(Color.LightGray, RoundedCornerShape(16.dp))
+                    .background(Color.LightGray, RoundedCornerShape(5.dp))
                     .combinedClickable(
                         onClick = { onObjectClick.invoke(launcherObject) },
                         onLongClick = { onObjectLongPress.invoke(launcherObject) })
-                    .padding(16.dp)
+                    .padding(5.dp)
             ) {
                 Column(
                     modifier = Modifier.align(Alignment.Center)
@@ -492,5 +492,13 @@ class MainActivity : ComponentActivity() {
                 imageView.setImageDrawable(drawable)
             }
         )
+    }
+
+    @Deprecated("Deprecated in Java")
+    @SuppressLint("MissingSuperCall")
+    override fun onBackPressed() {
+        if (folderName != "MAIN_FOLDER") {
+            super.onBackPressed()
+        }
     }
 }
