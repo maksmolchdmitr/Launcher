@@ -22,13 +22,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.lifecycleScope
@@ -138,59 +143,115 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val addBoxVisible = remember { mutableStateOf(false) }
+        val addApplicationBoxVisible = remember { mutableStateOf(false) }
+        val addFolderBoxVisible = remember { mutableStateOf(false) }
 
         Box(
             Modifier.fillMaxSize()
         ) {
             FloatingActionButton(
                 onClick = {
-                    addBoxVisible.value = true
+                    addApplicationBoxVisible.value = true
                 },
                 modifier = Modifier
                     .padding(16.dp)
                     .size(50.dp)
                     .align(Alignment.BottomEnd)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
+                Icon(Icons.Default.Add, contentDescription = "Add Application")
+            }
+            FloatingActionButton(
+                onClick = {
+                    addFolderBoxVisible.value = true
+                },
+                modifier = Modifier
+                    .padding(16.dp)
+                    .size(50.dp)
+                    .align(Alignment.BottomStart)
+            ) {
+                Icon(Icons.Default.AddCircle, contentDescription = "Add Folder")
             }
         }
 
-        if (addBoxVisible.value) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.DarkGray)
+        if (addApplicationBoxVisible.value) {
+            AddApplicationBox(context, addApplicationBoxVisible)
+        }
+
+        if (addFolderBoxVisible.value) {
+            AddFolderBox(addFolderBoxVisible)
+        }
+    }
+
+    @SuppressLint("UnrememberedMutableState")
+    @Preview(showBackground = true)
+    @Composable
+    fun Preview() {
+        AddFolderBox(remember { mutableStateOf(false) })
+    }
+
+    @Composable
+    fun AddFolderBox(addFolderBoxVisible: MutableState<Boolean>) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.DarkGray)
+        ) {
+            val folderNameText = remember { mutableStateOf("") }
+            Row(
+                Modifier.align(Alignment.Center)
             ) {
-                val addLauncherObjectToFolderAndCloseAddBox: (LauncherObject) -> Unit =
-                    { launcherObject ->
-                        Toast.makeText(
-                            context,
-                            "addLauncherObjectToFolderAndCloseAddBox with $launcherObject",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        addToFolder(launcherObject)
-                        addBoxVisible.value = false
-                    }
-                val some: (LauncherObject) -> Unit = { launcherObject ->
-                    Toast.makeText(
-                        context,
-                        "Some add box launcher object acts with $launcherObject",
-                        Toast.LENGTH_SHORT
-                    )
-                        .show()
-                }
-                LauncherObjects(
-                    1,
-                    launcherObjects = installedApplications,
-                    onObjectClick = addLauncherObjectToFolderAndCloseAddBox,
-                    onObjectLongPress = some,
+                TextField(
+                    value = folderNameText.value,
+                    onValueChange = { folderNameText.value = it },
+                    label = { Text("Folder Name") },
+                    modifier = Modifier.background(Color.Black),
                 )
+
+                Button(onClick = {
+                    addToCurrentFolder(Folder(folderNameText.value))
+                    addFolderBoxVisible.value = false
+                }) {
+                    Text("Add")
+                }
             }
         }
     }
 
-    private fun addToFolder(launcherObject: LauncherObject) {
+    @Composable
+    fun AddApplicationBox(context: Context, addApplicationBoxVisible: MutableState<Boolean>) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.DarkGray)
+        ) {
+            val addLauncherObjectToFolderAndCloseAddBox: (LauncherObject) -> Unit =
+                { launcherObject ->
+                    Toast.makeText(
+                        context,
+                        "addLauncherObjectToFolderAndCloseAddBox with $launcherObject",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    addToCurrentFolder(launcherObject)
+                    addApplicationBoxVisible.value = false
+                }
+            val some: (LauncherObject) -> Unit = { launcherObject ->
+                Toast.makeText(
+                    context,
+                    "Some add box launcher object acts with $launcherObject",
+                    Toast.LENGTH_SHORT
+                )
+                    .show()
+            }
+            LauncherObjects(
+                1,
+                launcherObjects = installedApplications,
+                onObjectClick = addLauncherObjectToFolderAndCloseAddBox,
+                onObjectLongPress = some,
+            )
+        }
+    }
+
+    private fun addToCurrentFolder(launcherObject: LauncherObject) {
         val folder = runBlocking {
             folderRepository.get(folderName)
         } ?: Folder(folderName)
@@ -251,10 +312,11 @@ class MainActivity : ComponentActivity() {
                     .padding(5.dp)
                     .weight(1f, true)
                     .align(Alignment.CenterVertically)
-                    .background(Color.LightGray)
+                    .background(Color.LightGray, CircleShape)
                     .combinedClickable(
                         onClick = { onObjectClick.invoke(launcherObject) },
                         onLongClick = { onObjectLongPress.invoke(launcherObject) })
+                    .padding(10.dp)
             ) {
                 Column(
                     modifier = Modifier.align(Alignment.Center)
@@ -264,13 +326,13 @@ class MainActivity : ComponentActivity() {
                             try {
                                 packageManager.getApplicationIcon(launcherObject.packageName)
                             } catch (e: PackageManager.NameNotFoundException) {
-                                getDrawable(R.mipmap.ic_folder)!!
+                                getDrawable(R.mipmap.ic_application)
                             }
                         }
 
-                        is Folder -> getDrawable(R.mipmap.ic_folder)!!
-                        else -> getDrawable(R.mipmap.ic_folder)!!
-                    }
+                        is Folder -> getDrawable(R.mipmap.ic_folder)
+                        else -> getDrawable(R.mipmap.ic_application)
+                    }!!
                     DrawableImage(drawable = icon)
                     Text(text = launcherObject.name, color = Color.Black)
                 }
