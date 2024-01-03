@@ -215,21 +215,35 @@ class MainActivity : ComponentActivity() {
         }
 
         if (addApplicationBoxVisible.value) {
-            AddApplicationBox(
-                context,
-                addApplicationBoxVisible,
-                getGlobalSetting().objectCountInRowInAdding
-            )
+            DialogBlock(onDismissRequest = { addApplicationBoxVisible.value = false }) {
+                AddApplicationBox(
+                    context,
+                    addApplicationBoxVisible,
+                    getGlobalSetting().objectCountInRowInAdding
+                )
+            }
         }
 
         if (addFolderBoxVisible.value) {
-            AddFolderBox(addFolderBoxVisible)
+            DialogBlock(onDismissRequest = { addFolderBoxVisible.value = false }) {
+                AddFolderBox(addFolderBoxVisible)
+            }
         }
 
         if (launcherObjectSettingDialog.value) {
             LauncherObjectSettingDialog(onDismissRequest = {
                 launcherObjectSettingDialog.value = false
             }, currentSettingLauncherObject)
+        }
+    }
+
+    @Composable
+    fun DialogBlock(
+        onDismissRequest: () -> Unit,
+        content: @Composable () -> Unit,
+    ) {
+        Dialog(onDismissRequest = { onDismissRequest() }) {
+            content()
         }
     }
 
@@ -499,6 +513,9 @@ class MainActivity : ComponentActivity() {
     override fun onBackPressed() {
         if (folderName != "MAIN_FOLDER") {
             super.onBackPressed()
+        } else {
+            val intent = Intent(this, MainActivity::class.java)
+            startActivity(intent)
         }
     }
 }
