@@ -367,12 +367,11 @@ class MainActivity : ComponentActivity() {
                 val objects = remember {
                     mutableStateOf(installedApplications)
                 }
-                SearchRowBlock { searchValue ->
+                SearchRowBlock { searchPrefix ->
                     objects.value = installedApplications.filter { launcherObject ->
-                        launcherObject.name.lowercase(Locale.getDefault()).startsWith(
-                            searchValue.lowercase(
-                                Locale.getDefault()
-                            )
+                        searchFilter(
+                            launcherObject.name.lowercase(Locale.getDefault()),
+                            searchPrefix.lowercase(Locale.getDefault())
                         )
                     }
                 }
@@ -402,6 +401,16 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    private fun searchFilter(name: String, searchPrefix: String): Boolean {
+        val words = name.split(Regex("\\P{L}+"))
+        for (word in words) {
+            if (word.startsWith(searchPrefix)) {
+                return true
+            }
+        }
+        return false
     }
 
     @SuppressLint("UnrememberedMutableState")
