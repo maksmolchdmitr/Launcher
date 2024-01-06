@@ -1,14 +1,17 @@
 package maks.molch.dmitr.makslauncher
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -16,6 +19,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,7 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -48,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -280,41 +285,83 @@ class MainActivity : ComponentActivity() {
                             .padding(16.dp),
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        TextButton(
-                            onClick = {
-                                onDismissRequest()
-                                removeFromCurrentFolder(currentSettingLauncherObject.value!!)
-                            },
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth()
-                                .height(100.dp)
-                                .background(Color.LightGray, CircleShape)
+                        ApplicationSettingButton(
+                            columnScope = this,
+                            text = "Delete object $objName",
+                            icon = Icons.Default.Clear
                         ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "Remove"
-                            )
-                            Text("Delete object $objName")
+                            onDismissRequest()
+                            removeFromCurrentFolder(currentSettingLauncherObject.value!!)
                         }
-                        TextButton(
-                            onClick = {
+                        if (currentSettingLauncherObject.value is Application) {
+                            ApplicationSettingButton(
+                                columnScope = this,
+                                text = "Remove application from your device $objName",
+                                icon = Icons.Default.Delete
+                            ) {
                                 onDismissRequest()
-                            },
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .fillMaxWidth()
-                                .height(100.dp)
-                                .background(Color.LightGray, CircleShape)
+                                deleteApplicationFromDevice(currentSettingLauncherObject.value as Application)
+                            }
+                        }
+                        ApplicationSettingButton(
+                            columnScope = this,
+                            text = "Cancel",
+                            icon = Icons.Default.Delete
                         ) {
-                            Icon(
-                                Icons.Default.ArrowBack,
-                                contentDescription = "Cancel"
-                            )
-                            Text("Cancel")
+                            onDismissRequest()
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private val uninstallActivityResultLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_CANCELED) {
+            Toast.makeText(
+                this,
+                "Application was successfully removed!",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            Toast.makeText(
+                this,
+                "Application removing - Failed: with result $result",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun deleteApplicationFromDevice(app: Application) {
+        val packageUri = Uri.parse("package:${app.packageName}")
+        val uninstallIntent = Intent(Intent.ACTION_DELETE, packageUri)
+        uninstallActivityResultLauncher.launch(uninstallIntent)
+        removeFromCurrentFolder(app)
+    }
+
+    @Composable
+    fun ApplicationSettingButton(
+        columnScope: ColumnScope,
+        text: String,
+        icon: ImageVector,
+        onClick: () -> Unit,
+    ) {
+        columnScope.apply {
+            TextButton(
+                onClick = onClick,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .weight(1f, true)
+                    .background(Color.LightGray, CircleShape)
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = "Button icon",
+                )
+                Text(text)
             }
         }
     }
