@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.AppCompatImageView
@@ -87,6 +88,17 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("MutableCollectionMutableState")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        onBackPressedDispatcher.addCallback(this) {
+            if (folderName != "MAIN_FOLDER") {
+                isEnabled = false
+                onBackPressed()
+            } else {
+                val intent = Intent(this@MainActivity, MainActivity::class.java)
+                startActivity(intent)
+            }
+        }
+
 
         installedApplications = getInstalledAppInfoList()
 
@@ -603,16 +615,5 @@ class MainActivity : ComponentActivity() {
                 imageView.setImageDrawable(drawable)
             }
         )
-    }
-
-    @Deprecated("Deprecated in Java")
-    @SuppressLint("MissingSuperCall")
-    override fun onBackPressed() {
-        if (folderName != "MAIN_FOLDER") {
-            super.onBackPressed()
-        } else {
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
-        }
     }
 }
